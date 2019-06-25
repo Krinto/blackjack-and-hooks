@@ -2,8 +2,8 @@ import React, { useState, useEffect, useReducer } from 'react';
 import logo from './logo.svg';
 import './App.css';
 import { Card, Deck, Hand, suits, values, Suit, CardValue, GameState } from './models/card';
-import { GameAction } from './models/actions'
-;import { map, xprod, head, tail, partition } from 'ramda';
+import { GameAction } from './models/actions';
+import { map, xprod } from 'ramda';
 import * as R from 'ramda';
 import shuffle from 'lodash.shuffle';
 
@@ -13,13 +13,13 @@ const App: React.FC = () => {
   const [ roundsWon, setRoundsWon ] = useState(0);
   const [ playersTurn, setPlayersTurn ] = useState(true);
 
-  
-
   function reducer(state: GameState, action: GameAction): GameState {
-    const initialiseDeck = (): Deck => shuffle(map(([suit, value]) => ({value, suit}), xprod<Suit, CardValue>(suits, values)));
+    const initialiseDeck = (): Deck => shuffle(map<R.KeyValuePair<Suit, CardValue>, Card>(([suit, value]) => ({value, suit, hidden: false}), xprod<Suit, CardValue>(suits, values)));
     switch (action.type) {
       case 'initialise':
         const initialDeck = initialiseDeck();
+        const houseInitial = R.take(2, initialDeck);
+        houseInitial[0].hidden = true;
         return { ...state, deck: R.drop(4, initialDeck), house: R.take(2, initialDeck), player: R.pipe<Card[], Card[], Card[]>(R.drop(2), R.take(2))(initialDeck) };
       case 'hit_me':
         if(state.deck.length > 0) {
@@ -94,12 +94,12 @@ const App: React.FC = () => {
         </div>
         <div className="dealer-hand">
         {map(card => (
-            <img key={`${card.value}_of_${card.suit}`} className="card" alt="card" src={require(`./assets/images/${card.value}_of_${card.suit}.svg`)} />
+            <img key={`${card.value}_of_${card.suit}`} className={"card" + (card.hidden ? " hidden" : "")} alt="card" src={require(`./assets/images/${card.value}_of_${card.suit}.svg`)} />
           ), gameState.house)}
         </div>
         <div className="player-hand">
           {map(card => (
-            <img key={`${card.value}_of_${card.suit}`} className="card" alt="card" src={require(`./assets/images/${card.value}_of_${card.suit}.svg`)} />
+            <img key={`${card.value}_of_${card.suit}`} className={"card" + (card.hidden ? " hidden" : "")} alt="card" src={require(`./assets/images/${card.value}_of_${card.suit}.svg`)} />
           ), gameState.player)}
         </div>
       </div>

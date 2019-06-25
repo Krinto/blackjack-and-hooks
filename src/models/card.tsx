@@ -10,7 +10,8 @@ export type Suit = "diamonds" | "hearts" | "spades" | "clubs";
 
 export type Card = {
     value: CardValue,
-    suit: Suit
+    suit: Suit,
+    hidden: boolean
 }
 
 export type Deck = Card[];
