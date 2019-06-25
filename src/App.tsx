@@ -1,91 +1,112 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useReducer } from 'react';
 import logo from './logo.svg';
 import './App.css';
-import { Card, Deck, Hand, suits, values, Suit, CardValue } from './models/card';
-import { map, xprod, head, tail, partition } from 'ramda';
+import { Card, Deck, Hand, suits, values, Suit, CardValue, GameState } from './models/card';
+import { GameAction } from './models/actions'
+;import { map, xprod, head, tail, partition } from 'ramda';
 import * as R from 'ramda';
 import shuffle from 'lodash.shuffle';
 
 const App: React.FC = () => {
-  const [ deck, setDeck ] = useState<Deck>([]);
-  const [ discard, setDiscard ] = useState<Card[]>([]);
-  const [ house, setHouse ] = useState<Hand>([]);
-  const [ player, setPlayer ] = useState<Hand>([]);
-  const [ roundLost, setRoundsLost ] = useState(0);
-  const [ roundWon, setRoundsWon ] = useState(0);
+  const [ gameState, dispatch ] = useReducer<(s: GameState, a: GameAction) => GameState>(reducer, {deck: [], discard: [], house: [], player: []});
+  const [ roundsLost, setRoundsLost ] = useState(0);
+  const [ roundsWon, setRoundsWon ] = useState(0);
+  const [ playersTurn, setPlayersTurn ] = useState(true);
 
-  const initialiseDeck = (): Deck => shuffle(map(([suit, value]) => ({value, suit}), xprod<Suit, CardValue>(suits, values)));
+  
 
-  const draw = (cards: number, hand: Hand, setHand: React.Dispatch<React.SetStateAction<Card[]>>) => {
-    const topCard = head(deck)
-    if (topCard !== undefined) {
-      setHand([...hand, topCard])
-      setDeck(tail(deck))
+  function reducer(state: GameState, action: GameAction): GameState {
+    const initialiseDeck = (): Deck => shuffle(map(([suit, value]) => ({value, suit}), xprod<Suit, CardValue>(suits, values)));
+    switch (action.type) {
+      case 'initialise':
+        const initialDeck = initialiseDeck();
+        return { ...state, deck: R.drop(4, initialDeck), house: R.take(2, initialDeck), player: R.pipe<Card[], Card[], Card[]>(R.drop(2), R.take(2))(initialDeck) };
+      case 'hit_me':
+        if(state.deck.length > 0) {
+          const card = R.take(1, state.deck);
+          return { ...state, deck: R.drop(1, state.deck), player: [...state.player, ...card]};
+        }
+        else {
+          alert('\/\/TODO: gameover ╭∩╮(Ο_Ο)╭∩╮');
+          return {} as any;
+        }
+      case 'stay':
+        if(state.deck.length > 0) {
+          const card = R.take(1, state.deck);
+          //TODO keep going to 17 or bust
+          return { ...state, deck: R.drop(1, state.deck), house: [...state.house, ...card]};
+        }
+        else {
+          alert('\/\/TODO: gameover ╭∩╮(Ο_Ο)╭∩╮');
+          return {} as any;
+        }
+      default:
+        throw new Error();
     }
-    else {
-      console.error('you fucked up')
-    }
   }
-  const playerTurn = () => {
+  // TODO check if there are enough cards in the deck to get the number of cards requested
+  // TODO shuffle discard back into deck
 
-  }
-
-  const houseTurn = () => {
-    // TODO take turns
-
-    // TODO clean up and draw for next turn
-    
-    playerTurn()
-  }
-
-  const checkScore = (hand: Hand): Number[] => {
+  const scores = (hand: Hand): number[] => {
     const numericValue = (v: CardValue) => {
       if (v === "ace") {
-        throw Error('not so smart are you now, typescript type-system? ╭∩╮(Ο_Ο)╭∩╮') // TODO
+        return [1, 11]
       }
       if (v === "jack" || v === "queen" || v === "king") {
-        return 10;
+        return [10];
       }
-      return v;
+      return [v];
     }
-
-    const [aces, not] = partition<Card>((c: Card) => c.value === "ace", hand);
-    const a = 0;
-    const b = R.sum(map((c: Card) => numericValue(c.value))(not))
-  }
-
-  const stay = () => {
-    houseTurn();
-  }
-
-  const hitMe = () => {
-    draw(1, player, setPlayer);
-    checkScore(player);
-    // TODO if bust you lose
+    
+    const c = R.head(hand);
+    if (c !== undefined) {
+      return R.uniq(map(([a, b]) => a + b, xprod<number, number>(numericValue(c.value), scores(R.tail(hand)))))
+    }
+    return []
   }
   
+  const isBust = (hand: Hand): boolean => R.none(x => x <= 21, scores(hand));
+  const bestScore = (hand: Hand): number => R.reduce(R.max, 0, R.reject(x => x > 21, scores(hand)));
+
   useEffect(() => {
-    setDeck(initialiseDeck());
-    draw(2, house, setHouse);
-    draw(2, player, setPlayer);
+    console.log("player: ");
+    console.log(gameState.player);
+  }, [gameState.player]);
+
+  useEffect(() => {
+    console.log("house: ");
+    console.log(gameState.house);
+  }, [gameState.house]);
+
+  useEffect(() => {
+    dispatch({type: 'initialise' });
   }, []);
 
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <div className="scores">
+        <h1>Player: <span>{roundsWon}</span></h1>
+        <h1>Dealer: <span>{roundsLost}</span></h1>
+      </div>
+      <div className="table">
+        <div className="deck">
+
+        </div>
+        <div className="dealer-hand">
+        {map(card => (
+            <img key={`${card.value}_of_${card.suit}`} className="card" alt="card" src={require(`./assets/images/${card.value}_of_${card.suit}.svg`)} />
+          ), gameState.house)}
+        </div>
+        <div className="player-hand">
+          {map(card => (
+            <img key={`${card.value}_of_${card.suit}`} className="card" alt="card" src={require(`./assets/images/${card.value}_of_${card.suit}.svg`)} />
+          ), gameState.player)}
+        </div>
+      </div>
+      <div className="player-buttons">
+        <button onClick={() => dispatch({type: 'hit_me'})}>Hit Me</button>
+        <button onClick={() => dispatch({type: 'stay'})}>Stay</button>
+      </div>
     </div>
   );
 }

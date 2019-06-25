@@ -1,3 +1,10 @@
+export type GameState = {
+    deck: Deck,
+    discard: Deck,
+    house: Hand,
+    player: Hand
+}
+
 export type CardValue =  2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | "jack" | "queen" | "king" | "ace";
 export type Suit = "diamonds" | "hearts" | "spades" | "clubs";
 
