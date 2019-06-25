@@ -71,6 +71,8 @@ const App: React.FC = () => {
   
   const isBust = (hand: Hand): boolean => R.none(x => x <= 21, scores(hand));
   const bestScore = (hand: Hand): number => R.reduce<number, number>(R.max, 0, R.reject(x => x > 21, scores(hand)));
+  // take a card if not bust, not on 21 already and under 17
+  const shouldHouseHit = (hand: Hand): boolean => !isBust(hand) && bestScore(hand) != 21 && R.any((s) => s < 17, scores(hand))
 
   useEffect(() => {
     console.log("player: ");
