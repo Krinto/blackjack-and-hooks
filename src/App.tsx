@@ -3,7 +3,6 @@ import logo from './logo.svg';
 import './App.css';
 import { Card, Deck, Hand, suits, values, Suit, CardValue, GameState } from './models/card';
 import { GameAction } from './models/actions';
-import { map, xprod } from 'ramda';
 import * as R from 'ramda';
 import shuffle from 'lodash.shuffle';
 
@@ -14,7 +13,7 @@ const App: React.FC = () => {
   const [ playersTurn, setPlayersTurn ] = useState(true);
 
   function reducer(state: GameState, action: GameAction): GameState {
-    const initialiseDeck = (): Deck => shuffle(map<R.KeyValuePair<Suit, CardValue>, Card>(([suit, value]) => ({value, suit, hidden: false}), xprod<Suit, CardValue>(suits, values)));
+    const initialiseDeck = (): Deck => shuffle(R.map<R.KeyValuePair<Suit, CardValue>, Card>(([suit, value]) => ({value, suit, hidden: false}), R.xprod<Suit, CardValue>(suits, values)));
     switch (action.type) {
       case 'initialise':
         const initialDeck = initialiseDeck();
@@ -60,13 +59,18 @@ const App: React.FC = () => {
     
     const c = R.head(hand);
     if (c !== undefined) {
-      return R.uniq(map(([a, b]) => a + b, xprod<number, number>(numericValue(c.value), scores(R.tail(hand)))))
+      return R.pipe<Hand, Hand, number[], R.KeyValuePair<number, number>[], number[], number[]>(
+        R.tail,
+        scores,
+        R.xprod(numericValue(c.value)),
+        R.map(([a, b]) => a + b),
+        R.uniq)(hand);
     }
     return []
   }
   
   const isBust = (hand: Hand): boolean => R.none(x => x <= 21, scores(hand));
-  const bestScore = (hand: Hand): number => R.reduce(R.max, 0, R.reject(x => x > 21, scores(hand)));
+  const bestScore = (hand: Hand): number => R.reduce<number, number>(R.max, 0, R.reject(x => x > 21, scores(hand)));
 
   useEffect(() => {
     console.log("player: ");
@@ -93,12 +97,12 @@ const App: React.FC = () => {
 
         </div>
         <div className="dealer-hand">
-        {map(card => (
+        {R.map(card => (
             <img key={`${card.value}_of_${card.suit}`} className={"card" + (card.hidden ? " hidden" : "")} alt="card" src={require(`./assets/images/${card.value}_of_${card.suit}.svg`)} />
           ), gameState.house)}
         </div>
         <div className="player-hand">
-          {map(card => (
+          {R.map(card => (
             <img key={`${card.value}_of_${card.suit}`} className={"card" + (card.hidden ? " hidden" : "")} alt="card" src={require(`./assets/images/${card.value}_of_${card.suit}.svg`)} />
           ), gameState.player)}
         </div>
