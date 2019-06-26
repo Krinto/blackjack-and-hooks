@@ -41,7 +41,11 @@ const App: React.FC = () => {
   const [ playersTurn, setPlayersTurn ] = useState(true);
 
   function reducer(state: GameState, action: GameAction): GameState {
-    const initialiseDeck = (): Deck => shuffle(R.map<R.KeyValuePair<Suit, CardValue>, Card>(([suit, value]) => ({value, suit, hidden: false}), R.xprod<Suit, CardValue>(suits, values)));
+    const initialiseDeck = (): Deck => R.pipe<R.KeyValuePair<Suit, CardValue>[], Deck, Deck>(
+      R.map(([suit, value]) => ({value, suit, hidden: false})),
+      shuffle
+    )(R.xprod<Suit, CardValue>(suits, values));
+    
     switch (action.type) {
       case 'initialise':
         const initialDeck = initialiseDeck();
