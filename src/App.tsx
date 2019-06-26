@@ -26,7 +26,7 @@ const scores = (hand: Hand): number[] => {
       R.map(([a, b]) => a + b),
       R.uniq)(hand);
   }
-  return [0]
+  return [0];
 }
 
 const isBust = (hand: Hand): boolean => R.none(x => x <= 21, scores(hand));
@@ -62,7 +62,7 @@ const App: React.FC = () => {
           return { ...state, deck: R.drop(1, state.deck), player: [...state.player, ...card]};
         }
         else {
-          alert('\/\/TODO: gameover ╭∩╮(Ο_Ο)╭∩╮');
+          alert('//TODO: gameover ╭∩╮(Ο_Ο)╭∩╮');
           return {} as any;
         }
       case 'stay':
@@ -73,14 +73,12 @@ const App: React.FC = () => {
             return { ...state, deck: R.drop(i, state.deck), house: R.map((c: Card) => R.set(cardHiddenLens, false, c) ,houseHand)};
           }
         }
-        alert('\/\/TODO: gameover ╭∩╮(Ο_Ο)╭∩╮');
+        alert('//TODO: gameover ╭∩╮(Ο_Ο)╭∩╮');
         return {} as any;
       default:
         throw new Error();
     }
   }
-  // TODO check if there are enough cards in the deck to get the number of cards requested
-  // TODO shuffle discard back into deck
 
   useEffect(() => {
     if (gameState.house.length > 0 && gameState.house[0].hidden && isBust(gameState.player)) {
@@ -91,7 +89,7 @@ const App: React.FC = () => {
   }, [gameState.player]);
 
   useEffect(() => {
-    if(gameState.house.length > 0 && gameState.house[0].hidden === true) return;
+    if (gameState.house.length > 0 && gameState.house[0].hidden === true) return;
     setTimeout(() => {
       if (isBust(gameState.house)) {
         setRoundsWon(roundsWon + 1);
@@ -99,12 +97,12 @@ const App: React.FC = () => {
         console.log("House Bust");
       }
       else {
-        if(didTie(gameState.player, gameState.house)){
+        if (didTie(gameState.player, gameState.house)){
           dispatch({type: 'discard_and_draw'});
           console.log("Tie");
         }
         else{
-          if(didPlayerWin(gameState.player, gameState.house)) {
+          if (didPlayerWin(gameState.player, gameState.house)) {
             setRoundsWon(roundsWon + 1);
             dispatch({type: 'discard_and_draw'});
             console.log("Player Wins");
