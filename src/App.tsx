@@ -92,7 +92,7 @@ const App: React.FC = () => {
   }, [gameState.player]);
 
   useEffect(() => {
-    if (gameState.house.length > 0 && gameState.house[0].hidden === true) return;
+    if (gameState.house.length == 0 || (gameState.house.length > 0 && gameState.house[0].hidden === true)) return;
     setTimeout(() => {
       if (isBust(gameState.house)) {
         setRoundsWon(roundsWon + 1);
