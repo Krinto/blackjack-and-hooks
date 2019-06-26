@@ -10,5 +10,9 @@ type StayAction = {
     type: 'stay'
 }
 
-export type GameAction = InitAction | HitAction | StayAction
+type DiscardDrawAction = {
+    type: 'discard_and_draw'
+}
+
+export type GameAction = InitAction | HitAction | StayAction | DiscardDrawAction
 

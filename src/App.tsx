@@ -31,8 +31,9 @@ const scores = (hand: Hand): number[] => {
 const isBust = (hand: Hand): boolean => R.none(x => x <= 21, scores(hand));
 const bestScore = (hand: Hand): number => R.reduce<number, number>(R.max, 0, R.reject(x => x > 21, scores(hand)));
 // take a card if not bust, not on 21 already and under 17
-const shouldHouseHit = (hand: Hand): boolean => !isBust(hand) && bestScore(hand) !== 21 && R.any((s) => s < 17, scores(hand))
-
+const shouldHouseHit = (hand: Hand): boolean => !isBust(hand) && bestScore(hand) !== 21 && R.any((s) => s < 17, scores(hand));
+const didPlayerWin = (playerHand: Hand, houseHand: Hand):boolean => bestScore(playerHand) > bestScore(houseHand);
+const didTie = (playerHand: Hand, houseHand: Hand):boolean => bestScore(playerHand) === bestScore(houseHand);
 
 const App: React.FC = () => {
   const [ gameState, dispatch ] = useReducer<(s: GameState, a: GameAction) => GameState>(reducer, {deck: [], discard: [], house: [], player: []});
@@ -47,13 +48,14 @@ const App: React.FC = () => {
     )(R.xprod<Suit, CardValue>(suits, values));
     
     switch (action.type) {
+      case 'discard_and_draw':
       case 'initialise':
         const initialDeck = initialiseDeck();
         const houseInitial = R.take(2, initialDeck);
         houseInitial[0].hidden = true;
         return { ...state, deck: R.drop(4, initialDeck), house: R.take(2, initialDeck), player: R.pipe<Card[], Card[], Card[]>(R.drop(2), R.take(2))(initialDeck) };
       case 'hit_me':
-        if(state.deck.length > 0) {
+        if (state.deck.length > 0) {
           const card = R.take(1, state.deck);
           return { ...state, deck: R.drop(1, state.deck), player: [...state.player, ...card]};
         }
@@ -62,19 +64,16 @@ const App: React.FC = () => {
           return {} as any;
         }
       case 'stay':
-        if(state.deck.length > 0) {
-          for (let i = 0;;i++) {
-            const card = R.take(i, state.deck);
-            const houseHand = [...state.house, ...card]
-            if (!shouldHouseHit(houseHand)) {
-              return { ...state, deck: R.drop(i, state.deck), house: houseHand};
-            }
+        state.house[0].hidden = false;
+        for (let i = 0; i < state.deck.length ;i++) {
+          const card = R.take(i, state.deck);
+          const houseHand = [...state.house, ...card]
+          if (!shouldHouseHit(houseHand)) {
+            return { ...state, deck: R.drop(i, state.deck), house: houseHand};
           }
         }
-        else {
-          alert('\/\/TODO: gameover ╭∩╮(Ο_Ο)╭∩╮');
-          return {} as any;
-        }
+        alert('\/\/TODO: gameover ╭∩╮(Ο_Ο)╭∩╮');
+        return {} as any;
       default:
         throw new Error();
     }
@@ -83,13 +82,34 @@ const App: React.FC = () => {
   // TODO shuffle discard back into deck
 
   useEffect(() => {
-    console.log("player: ");
-    console.log(gameState.player);
+    if (gameState.house.length > 0 && gameState.house[0].hidden && isBust(gameState.player)) {
+      setRoundsLost(roundsLost + 1);
+      dispatch({type: 'discard_and_draw'});
+    }
   }, [gameState.player]);
 
   useEffect(() => {
-    console.log("house: ");
-    console.log(gameState.house);
+    if(gameState.house.length > 0 && gameState.house[0].hidden === true) return;
+    if (isBust(gameState.house)) {
+      setRoundsWon(roundsWon + 1);
+      dispatch({type: 'discard_and_draw'});
+    }
+    else {
+      //TODO check who won
+      if(didTie(gameState.player, gameState.house)){
+        dispatch({type: 'discard_and_draw'});
+      }
+      else{
+        if(didPlayerWin(gameState.player, gameState.house)) {
+          setRoundsWon(roundsWon + 1);
+          dispatch({type: 'discard_and_draw'});
+        }
+        else {
+          setRoundsLost(roundsLost + 1);
+          dispatch({type: 'discard_and_draw'});
+        }
+      }
+    }
   }, [gameState.house]);
 
   useEffect(() => {
