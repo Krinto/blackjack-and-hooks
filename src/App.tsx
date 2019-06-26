@@ -1,10 +1,38 @@
 import React, { useState, useEffect, useReducer } from 'react';
-import logo from './logo.svg';
 import './App.css';
 import { Card, Deck, Hand, suits, values, Suit, CardValue, GameState } from './models/card';
 import { GameAction } from './models/actions';
 import * as R from 'ramda';
 import shuffle from 'lodash.shuffle';
+
+const scores = (hand: Hand): number[] => {
+  const numericValue = (v: CardValue) => {
+    if (v === "ace") {
+      return [1, 11]
+    }
+    if (v === "jack" || v === "queen" || v === "king") {
+      return [10];
+    }
+    return [v];
+  }
+  
+  const c = R.head(hand);
+  if (c !== undefined) {
+    return R.pipe<Hand, Hand, number[], R.KeyValuePair<number, number>[], number[], number[]>(
+      R.tail,
+      scores,
+      R.xprod(numericValue(c.value)),
+      R.map(([a, b]) => a + b),
+      R.uniq)(hand);
+  }
+  return [0]
+}
+
+const isBust = (hand: Hand): boolean => R.none(x => x <= 21, scores(hand));
+const bestScore = (hand: Hand): number => R.reduce<number, number>(R.max, 0, R.reject(x => x > 21, scores(hand)));
+// take a card if not bust, not on 21 already and under 17
+const shouldHouseHit = (hand: Hand): boolean => !isBust(hand) && bestScore(hand) !== 21 && R.any((s) => s < 17, scores(hand))
+
 
 const App: React.FC = () => {
   const [ gameState, dispatch ] = useReducer<(s: GameState, a: GameAction) => GameState>(reducer, {deck: [], discard: [], house: [], player: []});
@@ -31,9 +59,13 @@ const App: React.FC = () => {
         }
       case 'stay':
         if(state.deck.length > 0) {
-          const card = R.take(1, state.deck);
-          //TODO keep going to 17 or bust
-          return { ...state, deck: R.drop(1, state.deck), house: [...state.house, ...card]};
+          for (let i = 0;;i++) {
+            const card = R.take(i, state.deck);
+            const houseHand = [...state.house, ...card]
+            if (!shouldHouseHit(houseHand)) {
+              return { ...state, deck: R.drop(i, state.deck), house: houseHand};
+            }
+          }
         }
         else {
           alert('\/\/TODO: gameover ╭∩╮(Ο_Ο)╭∩╮');
@@ -45,34 +77,6 @@ const App: React.FC = () => {
   }
   // TODO check if there are enough cards in the deck to get the number of cards requested
   // TODO shuffle discard back into deck
-
-  const scores = (hand: Hand): number[] => {
-    const numericValue = (v: CardValue) => {
-      if (v === "ace") {
-        return [1, 11]
-      }
-      if (v === "jack" || v === "queen" || v === "king") {
-        return [10];
-      }
-      return [v];
-    }
-    
-    const c = R.head(hand);
-    if (c !== undefined) {
-      return R.pipe<Hand, Hand, number[], R.KeyValuePair<number, number>[], number[], number[]>(
-        R.tail,
-        scores,
-        R.xprod(numericValue(c.value)),
-        R.map(([a, b]) => a + b),
-        R.uniq)(hand);
-    }
-    return []
-  }
-  
-  const isBust = (hand: Hand): boolean => R.none(x => x <= 21, scores(hand));
-  const bestScore = (hand: Hand): number => R.reduce<number, number>(R.max, 0, R.reject(x => x > 21, scores(hand)));
-  // take a card if not bust, not on 21 already and under 17
-  const shouldHouseHit = (hand: Hand): boolean => !isBust(hand) && bestScore(hand) != 21 && R.any((s) => s < 17, scores(hand))
 
   useEffect(() => {
     console.log("player: ");
