@@ -43,6 +43,8 @@ const App: React.FC = () => {
   const [ gameState, dispatch ] = useReducer<(s: GameState, a: GameAction) => GameState>(reducer, {deck: [], discard: [], house: [], player: []});
   const [ roundsLost, setRoundsLost ] = useState(0);
   const [ roundsWon, setRoundsWon ] = useState(0);
+  const [ bannerText, setBannerText ] = useState("");
+  const [ hideButtons, setHideButtons ] = useState(false);
 
   function reducer(state: GameState, action: GameAction): GameState {
     const initialiseDeck = (): Deck => R.pipe<R.KeyValuePair<Suit, CardValue>[], Deck, Deck>(
@@ -81,43 +83,49 @@ const App: React.FC = () => {
     }
   }
 
+  const nextTurn = () => {
+    setTimeout(() => {
+      dispatch({type: 'discard_and_draw'});
+      setBannerText("");
+      setHideButtons(false);
+    }, 3000);
+  }
+
   useEffect(() => {
     if (gameState.house.length > 0 && gameState.house[0].hidden && isBust(gameState.player)) {
-      setTimeout(() => {
-        setRoundsLost(roundsLost + 1);
-        dispatch({type: 'discard_and_draw'});
-        console.log("Player Bust");
-      }, 3000);
+      setRoundsLost(roundsLost + 1);
+      setBannerText("Player Bust");
+      setHideButtons(true);
+      nextTurn();
     }
   }, [gameState.player]);
 
   useEffect(() => {
     if (gameState.house.length == 0 || (gameState.house.length > 0 && gameState.house[0].hidden === true)) return;
-    setTimeout(() => {
-      if (isBust(gameState.house)) {
-        setRoundsWon(roundsWon + 1);
-        dispatch({type: 'discard_and_draw'});
-        console.log("House Bust");
+    setHideButtons(true);
+    if (isBust(gameState.house)) {
+      setRoundsWon(roundsWon + 1);
+      setBannerText("House Bust");
+      nextTurn();
+    }
+    else {
+      if (didTie(gameState.player, gameState.house)){
+        setBannerText("Tie");
+        nextTurn();
       }
-      else {
-        if (didTie(gameState.player, gameState.house)){
-          dispatch({type: 'discard_and_draw'});
-          console.log("Tie");
+      else{
+        if (didPlayerWin(gameState.player, gameState.house)) {
+          setRoundsWon(roundsWon + 1);
+          setBannerText("Player Wins");
+          nextTurn();
         }
-        else{
-          if (didPlayerWin(gameState.player, gameState.house)) {
-            setRoundsWon(roundsWon + 1);
-            dispatch({type: 'discard_and_draw'});
-            console.log("Player Wins");
-          }
-          else {
-            setRoundsLost(roundsLost + 1);
-            dispatch({type: 'discard_and_draw'});
-            console.log("Player Lost");
-          }
+        else {
+          setRoundsLost(roundsLost + 1);
+          setBannerText("Player Lost");
+          nextTurn();
         }
       }
-    }, 3000);
+    }
   }, [gameState.house]);
 
   useEffect(() => {
@@ -126,14 +134,15 @@ const App: React.FC = () => {
 
   return (
     <div className="App" style={{ backgroundImage: `url(${tableImage})`}}>
-      <div className="scores">
-        <h1>Player: <span>{roundsWon}</span></h1>
-        <h1>Dealer: <span>{roundsLost}</span></h1>
+      <div className="score-board">
+        <h1>Score</h1>
+        <div className="scores">
+          <h2>Player: <span>{roundsWon}</span></h2>
+          <h2>Dealer: <span>{roundsLost}</span></h2>
+        </div>
       </div>
       <div className="table">
-        <div className="deck">
-
-        </div>
+        <div className="deck"></div>
         <div className="dealer-hand">
           {R.map((card) => <CardComponent card={card} key={`${card.value}_of_${card.suit}`} />, gameState.house)}
         </div>
@@ -141,10 +150,13 @@ const App: React.FC = () => {
           {R.map(card => <CardComponent card={card} key={`${card.value}_of_${card.suit}`} />, gameState.player)}
         </div>
       </div>
-      <div className="player-buttons">
-        <button onClick={() => dispatch({type: 'hit_me'})}>Hit Me</button>
-        <button onClick={() => dispatch({type: 'stay'})}>Stay</button>
-      </div>
+      {!hideButtons && (
+        <div className="player-buttons">
+          <button onClick={() => dispatch({type: 'hit_me'})}>Hit Me</button>
+          <button onClick={() => dispatch({type: 'stay'})}>Stay</button>
+        </div>
+      )}
+      <h1 className="banner-text">{bannerText}</h1>
     </div>
   );
 }
