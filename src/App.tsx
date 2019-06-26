@@ -2,6 +2,7 @@ import React, { useState, useEffect, useReducer } from 'react';
 import './App.css';
 import { Card, Deck, Hand, suits, values, Suit, CardValue, GameState } from './models/card';
 import { GameAction } from './models/actions';
+import { CardComponent } from './components/CardComponent';
 import * as R from 'ramda';
 import shuffle from 'lodash.shuffle';
 
@@ -15,7 +16,7 @@ const scores = (hand: Hand): number[] => {
     }
     return [v];
   }
-  
+
   const c = R.head(hand);
   if (c !== undefined) {
     return R.pipe<Hand, Hand, number[], R.KeyValuePair<number, number>[], number[], number[]>(
@@ -46,7 +47,7 @@ const App: React.FC = () => {
       R.map(([suit, value]) => ({value, suit, hidden: false})),
       shuffle
     )(R.xprod<Suit, CardValue>(suits, values));
-    
+
     switch (action.type) {
       case 'discard_and_draw':
       case 'initialise':
@@ -127,14 +128,10 @@ const App: React.FC = () => {
 
         </div>
         <div className="dealer-hand">
-        {R.map(card => (
-            <img key={`${card.value}_of_${card.suit}`} className={"card" + (card.hidden ? " hidden" : "")} alt="card" src={require(`./assets/images/${card.value}_of_${card.suit}.svg`)} />
-          ), gameState.house)}
+        {R.map((card) => <CardComponent card={card} />, gameState.house)}
         </div>
         <div className="player-hand">
-          {R.map(card => (
-            <img key={`${card.value}_of_${card.suit}`} className={"card" + (card.hidden ? " hidden" : "")} alt="card" src={require(`./assets/images/${card.value}_of_${card.suit}.svg`)} />
-          ), gameState.player)}
+          {R.map(card => <CardComponent card={card} />, gameState.player)}
         </div>
       </div>
       <div className="player-buttons">
