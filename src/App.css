@@ -32,10 +32,53 @@
   }
 }
 
-.card {
+.card-wrapper {
   margin: 5px;
+  perspective:800px;
+  display: inline-block;
+}
+
+.card {
+  position:relative;
+  width: 167px;
+  height: 243px;
+  -webkit-transition: transform 1.5s; /* Safari and Chrome */
+  transition: transform 1.5s;
+  transform-style:preserve-3d;
 }
 
 .card.hidden {
-  filter: brightness(0%);
+  -ms-transform: rotateY(-180deg); /* IE 9 */
+  -webkit-transform: rotateY(-180deg); /* Safari Chrome */
+  transform: rotateY(-180deg);
+}
+
+.card .front {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height:100%;
+  width:100%;
+  backface-visibility: hidden;
+}
+
+.card .back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height:100%;
+  width:100%;
+  backface-visibility: hidden;
+
+  /* rotating the back face of the card */
+  -ms-transform: rotateY(-180deg); /* IE 9 */
+  -webkit-transform: rotateY(-180deg); /* Safari */
+  transform: rotateY(-180deg);
+}
+
+.player-hand {
+  display: block;
+}
+.dealer-hand {
+  display: block;
 }

@@ -82,9 +82,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (gameState.house.length > 0 && gameState.house[0].hidden && isBust(gameState.player)) {
-      setRoundsLost(roundsLost + 1);
-      dispatch({type: 'discard_and_draw'});
-      console.log("Player Bust");
+      setTimeout(() => {
+        setRoundsLost(roundsLost + 1);
+        dispatch({type: 'discard_and_draw'});
+        console.log("Player Bust");
+      }, 3000);
     }
   }, [gameState.player]);
 
@@ -114,7 +116,7 @@ const App: React.FC = () => {
           }
         }
       }
-    }, 1000);
+    }, 3000);
   }, [gameState.house]);
 
   useEffect(() => {
@@ -132,10 +134,10 @@ const App: React.FC = () => {
 
         </div>
         <div className="dealer-hand">
-        {R.map((card) => <CardComponent card={card} />, gameState.house)}
+          {R.map((card) => <CardComponent card={card} key={`${card.value}_of_${card.suit}`} />, gameState.house)}
         </div>
         <div className="player-hand">
-          {R.map(card => <CardComponent card={card} />, gameState.player)}
+          {R.map(card => <CardComponent card={card} key={`${card.value}_of_${card.suit}`} />, gameState.player)}
         </div>
       </div>
       <div className="player-buttons">
