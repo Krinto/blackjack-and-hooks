@@ -35,12 +35,13 @@ const bestScore = (hand: Hand): number => R.reduce<number, number>(R.max, 0, R.r
 const shouldHouseHit = (hand: Hand): boolean => !isBust(hand) && bestScore(hand) !== 21 && R.any((s) => s < 17, scores(hand));
 const didPlayerWin = (playerHand: Hand, houseHand: Hand):boolean => bestScore(playerHand) > bestScore(houseHand);
 const didTie = (playerHand: Hand, houseHand: Hand):boolean => bestScore(playerHand) === bestScore(houseHand);
+const headLens = R.lensIndex(0);
+const cardHiddenLens = R.lensProp('hidden');
 
 const App: React.FC = () => {
   const [ gameState, dispatch ] = useReducer<(s: GameState, a: GameAction) => GameState>(reducer, {deck: [], discard: [], house: [], player: []});
   const [ roundsLost, setRoundsLost ] = useState(0);
   const [ roundsWon, setRoundsWon ] = useState(0);
-  const [ playersTurn, setPlayersTurn ] = useState(true);
 
   function reducer(state: GameState, action: GameAction): GameState {
     const initialiseDeck = (): Deck => R.pipe<R.KeyValuePair<Suit, CardValue>[], Deck, Deck>(
@@ -65,12 +66,11 @@ const App: React.FC = () => {
           return {} as any;
         }
       case 'stay':
-        state.house[0].hidden = false;
         for (let i = 0; i < state.deck.length ;i++) {
           const card = R.take(i, state.deck);
           const houseHand = [...state.house, ...card]
           if (!shouldHouseHit(houseHand)) {
-            return { ...state, deck: R.drop(i, state.deck), house: houseHand};
+            return { ...state, deck: R.drop(i, state.deck), house: R.map((c: Card) => R.set(cardHiddenLens, false, c) ,houseHand)};
           }
         }
         alert('\/\/TODO: gameover ╭∩╮(Ο_Ο)╭∩╮');
@@ -91,26 +91,27 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if(gameState.house.length > 0 && gameState.house[0].hidden === true) return;
-    if (isBust(gameState.house)) {
-      setRoundsWon(roundsWon + 1);
-      dispatch({type: 'discard_and_draw'});
-    }
-    else {
-      //TODO check who won
-      if(didTie(gameState.player, gameState.house)){
+    setTimeout(() => {
+      if (isBust(gameState.house)) {
+        setRoundsWon(roundsWon + 1);
         dispatch({type: 'discard_and_draw'});
       }
-      else{
-        if(didPlayerWin(gameState.player, gameState.house)) {
-          setRoundsWon(roundsWon + 1);
+      else {
+        if(didTie(gameState.player, gameState.house)){
           dispatch({type: 'discard_and_draw'});
         }
-        else {
-          setRoundsLost(roundsLost + 1);
-          dispatch({type: 'discard_and_draw'});
+        else{
+          if(didPlayerWin(gameState.player, gameState.house)) {
+            setRoundsWon(roundsWon + 1);
+            dispatch({type: 'discard_and_draw'});
+          }
+          else {
+            setRoundsLost(roundsLost + 1);
+            dispatch({type: 'discard_and_draw'});
+          }
         }
       }
-    }
+    }, 1000);
   }, [gameState.house]);
 
   useEffect(() => {
