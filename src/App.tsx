@@ -86,6 +86,7 @@ const App: React.FC = () => {
     if (gameState.house.length > 0 && gameState.house[0].hidden && isBust(gameState.player)) {
       setRoundsLost(roundsLost + 1);
       dispatch({type: 'discard_and_draw'});
+      console.log("Player Bust");
     }
   }, [gameState.player]);
 
@@ -95,19 +96,23 @@ const App: React.FC = () => {
       if (isBust(gameState.house)) {
         setRoundsWon(roundsWon + 1);
         dispatch({type: 'discard_and_draw'});
+        console.log("House Bust");
       }
       else {
         if(didTie(gameState.player, gameState.house)){
           dispatch({type: 'discard_and_draw'});
+          console.log("Tie");
         }
         else{
           if(didPlayerWin(gameState.player, gameState.house)) {
             setRoundsWon(roundsWon + 1);
             dispatch({type: 'discard_and_draw'});
+            console.log("Player Wins");
           }
           else {
             setRoundsLost(roundsLost + 1);
             dispatch({type: 'discard_and_draw'});
+            console.log("Player Lost");
           }
         }
       }
