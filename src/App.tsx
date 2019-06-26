@@ -5,6 +5,7 @@ import { GameAction } from './models/actions';
 import { CardComponent } from './components/CardComponent';
 import * as R from 'ramda';
 import shuffle from 'lodash.shuffle';
+import tableImage from './assets/images/table.png';
 
 const scores = (hand: Hand): number[] => {
   const numericValue = (v: CardValue) => {
@@ -124,7 +125,7 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="App">
+    <div className="App" style={{ backgroundImage: `url(${tableImage})`}}>
       <div className="scores">
         <h1>Player: <span>{roundsWon}</span></h1>
         <h1>Dealer: <span>{roundsLost}</span></h1>
