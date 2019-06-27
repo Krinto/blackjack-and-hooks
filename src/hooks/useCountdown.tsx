@@ -1,19 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-const useCountdown = (span: number, delay: number) => {
+const useCountdown = (span: number) => {
   const [ complete, setComplete ] = useState(false);
   const [ paused, setPaused ] = useState(false);
-  const [ currentTime, setCurrentTime ] = useState(-1);
+  const [ currentTime, setCurrentTime ] = useState(span);
 
   const togglePause = () => {
     setPaused(!paused);
   }
 
-  const tick = () => {
-    if (!paused && currentTime > 0) {
-        setCurrentTime(currentTime - delay);
-    }
-  }
+  const tick = useCallback(() => {
+    setCurrentTime(c => c > 0 ? c - 1 : 0);
+  }, []);
 
   const restart = () => {
     setComplete(false);
@@ -22,20 +20,20 @@ const useCountdown = (span: number, delay: number) => {
 
   useEffect(() => {
     if (currentTime === 0) {
-        setComplete(true);
+      setComplete(true);
     }
   }, [currentTime])
 
   // Set up the interval.
   useEffect(() => {
-    if (delay !== null && span !== null) {
-        setCurrentTime(span);
-        let id = setInterval(tick, delay);
-        return () => clearInterval(id);
+    if (span !== null) {
+      setCurrentTime(span);
+      let id = setInterval(tick, 1000);
+      return () => clearInterval(id);
     }
-  }, [delay, span]);
+  }, [span, tick]);
 
-  return { complete, currentTime, togglePause, restart }
+  return { complete, currentTime, restart }
 };
 
 export default useCountdown;

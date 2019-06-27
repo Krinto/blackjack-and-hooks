@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer } from 'react';
+import React, { useState, useEffect, useReducer, useCallback } from 'react';
 import './App.css';
 import { Card, Deck, Hand, suits, values, Suit, CardValue, GameState } from './models/card';
 import { GameAction } from './models/actions';
@@ -6,6 +6,7 @@ import { CardComponent } from './components/CardComponent';
 import * as R from 'ramda';
 import shuffle from 'lodash.shuffle';
 import tableImage from './assets/images/table.png';
+import useCountdown from './hooks/useCountdown';
 
 const scores = (hand: Hand): number[] => {
   const numericValue = (v: CardValue) => {
@@ -36,15 +37,21 @@ const bestScore = (hand: Hand): number => R.reduce<number, number>(R.max, 0, R.r
 const shouldHouseHit = (hand: Hand): boolean => !isBust(hand) && bestScore(hand) !== 21 && R.any((s) => s < 17, scores(hand));
 const didPlayerWin = (playerHand: Hand, houseHand: Hand):boolean => bestScore(playerHand) > bestScore(houseHand);
 const didTie = (playerHand: Hand, houseHand: Hand):boolean => bestScore(playerHand) === bestScore(houseHand);
-const headLens = R.lensIndex(0);
 const cardHiddenLens = R.lensProp('hidden');
 
 const App: React.FC = () => {
-  const [ gameState, dispatch ] = useReducer<(s: GameState, a: GameAction) => GameState>(reducer, {deck: [], discard: [], house: [], player: []});
+  const [ gameState, dispatch ] = useReducer<(s: GameState, a: GameAction) => GameState>(reducer, {deck: [], discard: [], house: [], player: [], playersTurn: null});
   const [ roundsLost, setRoundsLost ] = useState(0);
   const [ roundsWon, setRoundsWon ] = useState(0);
   const [ bannerText, setBannerText ] = useState("");
   const [ hideButtons, setHideButtons ] = useState(false);
+  const { complete, currentTime, restart } = useCountdown(20);
+
+  useEffect(() => {
+    if (complete) {
+      dispatch({type: 'stay'});
+    }
+  }, [complete]);
 
   function reducer(state: GameState, action: GameAction): GameState {
     const initialiseDeck = (): Deck => R.pipe<R.KeyValuePair<Suit, CardValue>[], Deck, Deck>(
@@ -54,11 +61,12 @@ const App: React.FC = () => {
 
     switch (action.type) {
       case 'discard_and_draw':
+        return { ...state, playersTurn: null };
       case 'initialise':
         const initialDeck = initialiseDeck();
         const houseInitial = R.take(2, initialDeck);
         houseInitial[0].hidden = true;
-        return { ...state, deck: R.drop(4, initialDeck), house: R.take(2, initialDeck), player: R.pipe<Card[], Card[], Card[]>(R.drop(2), R.take(2))(initialDeck) };
+        return { ...state, deck: R.drop(4, initialDeck), house: R.take(2, initialDeck), player: R.pipe<Card[], Card[], Card[]>(R.drop(2), R.take(2))(initialDeck), playersTurn: true };
       case 'hit_me':
         if (state.deck.length > 0) {
           const card = R.take(1, state.deck);
@@ -73,7 +81,7 @@ const App: React.FC = () => {
           const card = R.take(i, state.deck);
           const houseHand = [...state.house, ...card]
           if (!shouldHouseHit(houseHand)) {
-            return { ...state, deck: R.drop(i, state.deck), house: R.map((c: Card) => R.set(cardHiddenLens, false, c) ,houseHand)};
+            return { ...state, deck: R.drop(i, state.deck), house: R.map((c: Card) => R.set(cardHiddenLens, false, c) ,houseHand), playersTurn: false};
           }
         }
         alert('//TODO: gameover ╭∩╮(Ο_Ο)╭∩╮');
@@ -83,28 +91,29 @@ const App: React.FC = () => {
     }
   }
 
-  const nextTurn = () => {
+  const nextTurn = useCallback(() => {
+    dispatch({type: 'discard_and_draw'});
     setTimeout(() => {
-      dispatch({type: 'discard_and_draw'});
+      dispatch({type: 'initialise'});
       setBannerText("");
       setHideButtons(false);
+      restart();
     }, 3000);
-  }
+  }, [restart]);
 
-  useEffect(() => {
-    if (gameState.house.length > 0 && gameState.house[0].hidden && isBust(gameState.player)) {
-      setRoundsLost(roundsLost + 1);
+  const checkPlayerTurn = useCallback(() => {
+    if (isBust(gameState.player)) {
+      setRoundsLost(r => r + 1);
       setBannerText("Player Bust");
       setHideButtons(true);
       nextTurn();
     }
-  }, [gameState.player]);
+  }, [gameState.player, nextTurn]);
 
-  useEffect(() => {
-    if (gameState.house.length == 0 || (gameState.house.length > 0 && gameState.house[0].hidden === true)) return;
+  const checkHouseTurn = useCallback(() => {
     setHideButtons(true);
     if (isBust(gameState.house)) {
-      setRoundsWon(roundsWon + 1);
+      setRoundsWon(r => r + 1);
       setBannerText("House Bust");
       nextTurn();
     }
@@ -115,18 +124,29 @@ const App: React.FC = () => {
       }
       else{
         if (didPlayerWin(gameState.player, gameState.house)) {
-          setRoundsWon(roundsWon + 1);
+          setRoundsWon(r => r + 1);
           setBannerText("Player Wins");
           nextTurn();
         }
         else {
-          setRoundsLost(roundsLost + 1);
+          setRoundsLost(r => r + 1);
           setBannerText("Player Lost");
           nextTurn();
         }
       }
     }
-  }, [gameState.house]);
+  }, [gameState, nextTurn]);
+
+  useEffect(() => {
+    if (gameState.playersTurn !== null) {
+      if (gameState.playersTurn) {
+        checkPlayerTurn();
+      }
+      else {
+        checkHouseTurn();
+      }
+    }
+  }, [gameState.playersTurn, checkPlayerTurn, checkHouseTurn]);
 
   useEffect(() => {
     dispatch({type: 'initialise' });
@@ -134,6 +154,10 @@ const App: React.FC = () => {
 
   return (
     <div className="App" style={{ backgroundImage: `url(${tableImage})`}}>
+      <div className="turn-timer">
+        <h1>Turn Time</h1>
+        <h2>{currentTime}</h2>
+      </div>
       <div className="score-board">
         <h1>Score</h1>
         <div className="scores">

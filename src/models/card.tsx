@@ -2,7 +2,8 @@ export type GameState = {
     deck: Deck,
     discard: Deck,
     house: Hand,
-    player: Hand
+    player: Hand,
+    playersTurn: boolean | null
 }
 
 export type CardValue =  2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | "jack" | "queen" | "king" | "ace";
